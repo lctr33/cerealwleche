@@ -1,0 +1,27 @@
+# Archivo de variables de entorno local (¡NO SUBIR!)
+.env
+
+# Directorio de la tienda de WhatsApp (contiene sesión y mensajes - ¡NO SUBIR!)
+# Esta ruta es relativa a la raíz de tu proyecto, si clonaste whatsapp-mcp ahí.
+whatsapp-mcp/whatsapp-bridge/store/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+pip-log.txt
+.venv/
+venv/
+env/
+ENV/
+
+# Docker (a veces se generan localmente)
+docker-compose.override.yml 
+
+# IDEs / OS specific
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
