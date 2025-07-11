@@ -1,0 +1,13 @@
+# Dockerfile.host
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements_host.txt ./
+RUN pip install --no-cache-dir -r requirements_host.txt
+
+COPY . .
+
+EXPOSE 8000
+# El --reload es bueno para desarrollo, pero considera quitarlo para "producción"
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

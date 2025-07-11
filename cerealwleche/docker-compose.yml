@@ -1,0 +1,128 @@
+services:
+  mysql_db:
+    image: mysql:8.0
+    container_name: mysql_streaming_db
+    ports:
+      - "${MYSQL_HOST_PORT:-3307}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data_volume:/var/lib/mysql
+      - ./base_datos.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - agent_net
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost", "-u$$MYSQL_USER", "-p$$MYSQL_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  db_mcp_server:
+    container_name: db_mcp_server
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp_db
+    ports:
+      - "8001:8001"
+    environment:
+      DB_HOST: mysql_db
+      DB_USER: ${MYSQL_USER}
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      DB_NAME: ${MYSQL_DATABASE}
+    depends_on:
+      mysql_db:
+        condition: service_healthy
+    networks:
+      - agent_net
+
+  # --- NUEVO SERVICIO DE INICIALIZACIÓN ---
+  db_whatsapp_init:
+    container_name: db_whatsapp_init
+    build:
+      context: .
+      dockerfile: Dockerfile.init
+    volumes:
+      - whatsapp_store_volume:/data
+    restart: on-failure
+
+  whatsapp_go_bridge:
+    container_name: whatsapp_go_bridge
+    build: ./nuevo_puente_go  # <-- CAMBIA ESTO para que apunte a nuestra nueva carpeta
+    ports:
+      - "8080:8080"
+    volumes:
+      - whatsapp_store_volume:/app # <-- CAMBIA ESTO para que la DB se guarde en el volumen
+    networks:
+      - agent_net
+    stdin_open: true
+    tty: true
+    depends_on:
+      - db_whatsapp_init
+
+  whatsapp_python_mcp_server:
+    container_name: whatsapp_python_mcp_server
+    build: ./whatsapp-mcp/whatsapp-mcp-server
+    ports:
+      - "8002:8002"
+    environment:
+      WHATSAPP_BRIDGE_URL: "http://whatsapp_go_bridge:8080"
+    volumes:
+      - whatsapp_store_volume:/data
+    networks:
+      - agent_net
+    depends_on: # <-- DEPENDENCIA AÑADIDA
+      - whatsapp_go_bridge
+      - db_whatsapp_init
+
+  ollama_service:
+    container_name: ollama_ai
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data_volume:/root/.ollama
+    networks:
+      - agent_net
+
+  host_app:
+    container_name: host_fastapi_app
+    build:
+      context: .
+      dockerfile: Dockerfile.host
+    ports:
+      - "8000:8000"
+    environment:
+      DB_MCP_SERVER_URL: "http://db_mcp_server:8001"
+      WHATSAPP_MCP_SERVER_URL: "http://whatsapp_python_mcp_server:8002/mcp/"
+      OLLAMA_HOST: "http://ollama_service:11434"
+    depends_on:
+      - db_mcp_server
+      - whatsapp_python_mcp_server
+      - ollama_service
+    networks:
+      - agent_net
+
+  active_agent:
+    container_name: active_agent
+    build:
+      context: .
+      dockerfile: Dockerfile.host
+    command: python -u agente_activo.py
+    depends_on:
+      - host_app
+      - whatsapp_python_mcp_server
+    networks:
+      - agent_net
+    restart: unless-stopped
+
+volumes:
+  mysql_data_volume:
+  whatsapp_store_volume:
+  ollama_data_volume:
+
+networks:
+  agent_net:
+    driver: bridge

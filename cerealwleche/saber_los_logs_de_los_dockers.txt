@@ -1,0 +1,38 @@
+
+# --- Para ver los logs del "Cerebro" principal (Host FastAPI) ---
+# Aquí verás la lógica principal del agente, las decisiones de la IA y los errores de orquestación.
+sudo docker compose logs -f host_app
+
+# --- Para ver los logs del "Agente Activo" (el que busca mensajes nuevos) ---
+# Este log te muestra si el agente está buscando mensajes y si los encuentra.
+sudo docker compose logs -f active_agent
+
+# --- Para ver los logs del Puente de WhatsApp (Go) ---
+# Aquí verás la conexión directa con WhatsApp, la generación del QR y la recepción/envío de mensajes a bajo nivel.
+sudo docker compose logs -f whatsapp_go_bridge
+
+# --- Para ver los logs del Servidor de Herramientas de WhatsApp (Python) ---
+# Este log muestra si las llamadas a las herramientas de WhatsApp (como listar o guardar mensajes) funcionan.
+sudo docker compose logs -f whatsapp_python_mcp_server
+
+# --- Para ver los logs de la Base de Datos del Negocio (MySQL) ---
+# Muestra el estado del servidor de la base de datos principal.
+sudo docker compose logs -f mysql_db
+
+# --- Para ver los logs de la API de la Base de Datos del Negocio ---
+# Muestra si las llamadas a las herramientas de la base de datos (listar servicios, etc.) se reciben.
+sudo docker compose logs -f db_mcp_server
+
+# --- Para ver los logs del servicio de Inteligencia Artificial (Ollama) ---
+# Útil para ver si el modelo de IA se está cargando o si hay errores de memoria.
+sudo docker compose logs -f ollama_service
+
+# --- Para ver los logs del Inicializador de la Base de Datos de WhatsApp ---
+# Nota: Se usa sin el -f porque este contenedor solo se ejecuta una vez al arrancar y luego se detiene.
+sudo docker compose logs db_whatsapp_init
+
+
+# ================================================================
+# Comando para ver TODOS los logs mezclados en tiempo real
+# =================================G===============================
+# sudo docker compose up --build
